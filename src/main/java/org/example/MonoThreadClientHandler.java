@@ -8,15 +8,17 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MonoThreadClientHandler implements Runnable {
-    final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js",
-            "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
     private static Socket clientDialog;
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, Handler>> handlers;
 
-    public MonoThreadClientHandler(Socket socket) {
+    public MonoThreadClientHandler(Socket socket, ConcurrentHashMap<String, ConcurrentHashMap<String, Handler>> handlers) {
         MonoThreadClientHandler.clientDialog = socket;
+        this.handlers = handlers;
     }
 
     @Override
@@ -34,9 +36,14 @@ public class MonoThreadClientHandler implements Runnable {
                     // just close socket
                     continue;
                 }
-
+                final var method = parts[0];
                 final var path = parts[1];
-                if (!validPaths.contains(path)) {
+                if (handlers.containsKey(method)) {
+                    if (handlers.get(method).containsKey(path)) {
+                        Request request = new Request(method, path, in);
+                        handlers.get(method).get(path).handle(request, out);
+                    }
+                } else {
                     out.write((
                             "HTTP/1.1 404 Not Found\r\n" +
                                     "Content-Length: 0\r\n" +
