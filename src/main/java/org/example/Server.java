@@ -14,7 +14,7 @@ public class Server {
                 while(!serverSocket.isClosed()) {
                     final var socket = serverSocket.accept();
                     executorService.execute(new MonoThreadClientHandler(socket, handlers));
-                    System.out.print("Connection accepted.");
+                    System.out.println("Connection accepted.");
                 }
                 executorService.shutdown();
             } catch (IOException e) {
