@@ -1,5 +1,8 @@
 package org.example;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -30,19 +33,26 @@ public class MonoThreadClientHandler implements Runnable {
                 // read only request line for simplicity
                 // must be in form GET /path HTTP/1.1
                 final var requestLine = in.readLine();
-                final var parts = requestLine.split(" ");
+                final String[] parts = requestLine.split(" ");
 
                 if (parts.length != 3) {
                     // just close socket
                     continue;
                 }
                 final var method = parts[0];
-                final var path = parts[1];
+                final String path = parts[1];
+                List<NameValuePair> query = null;
+                if (path.contains("?")) {
+                    final var pathAndQuery = path.split("\\?");
+                    final var queryString = pathAndQuery[1];
+                    query = URLEncodedUtils.parse(queryString, null);
+                }
                 if (handlers.containsKey(method)) {
                     if (handlers.get(method).containsKey(path)) {
-                        Request request = new Request(method, path, in);
+                        Request request = new Request(method, path, query, in);
                         handlers.get(method).get(path).handle(request, out);
                     }
+
                 } else {
                     out.write((
                             "HTTP/1.1 404 Not Found\r\n" +
